@@ -17,10 +17,13 @@ defmodule BankAccountChartsWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :index
+    get "/:username/over_time", ChartController, :over_time
   end
 
   # Other scopes may use custom stacks.
-  # scope "/api", BankAccountChartsWeb do
-  #   pipe_through :api
-  # end
+  scope "/api", BankAccountChartsWeb.Api do
+    pipe_through :api
+
+    post "/exchange_token", TokenController, :exchange_token
+  end
 end

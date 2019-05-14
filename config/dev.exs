@@ -73,3 +73,5 @@ config :bank_account_charts, BankAccountCharts.Repo,
   database: "bank_account_charts_dev",
   hostname: "localhost",
   pool_size: 10
+
+import_config "dev.secret.exs"

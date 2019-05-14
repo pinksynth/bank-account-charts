@@ -1,0 +1,4 @@
+<script>
+	var obj = <%= raw(@obj) %>;
+</script>
+Neat stuff goes here.

@@ -1,4 +1,46 @@
+<div id="chart"></div>
+
 <script>
+	Array.prototype.log = function () {
+		console.log(this);
+		return this;
+	};
+
 	var obj = <%= raw(@obj) %>;
+	var trans = obj.transactions.transactions.slice();
+	var accountTransactions = {};
+	var accountBalances = {};
+	var getAccountName = (account_id) => {
+		let account = obj.transactions.accounts.find(a => a.account_id === account_id);
+		return `${account.name} ${account.mask} - ${account.subtype}`;
+	}
+	obj.transactions.accounts.forEach(({ account_id, balances: { available, limit }, type }) => {
+		let name = getAccountName(account_id);
+		accountTransactions[name] = [];
+		if (type === 'credit' && limit !== null) {
+			accountBalances[name] = limit - available;
+		} else {
+			accountBalances[name] = available;
+		}
+	});
+
+	obj.transactions.accounts.forEach(({account_id}) => {
+		let accountName = getAccountName(account_id);
+		obj.transactions.transactions
+			.filter(t => t.account_id === account_id)
+			.sort(t => t.date)
+			.log()
+			.forEach(((transaction, index, transactions) => {
+			let { amount, account_id, name, date } = transaction;
+			let currentBalance = accountBalances[accountName] -= amount;
+			accountTransactions[accountName].push({
+				currentBalance: parseFloat(currentBalance.toFixed(2)),
+				amount,
+				name,
+				date
+				// ...transaction
+			});
+		}));
+	});
+	console.log('accountTransactions', accountTransactions);
 </script>
-Neat stuff goes here.

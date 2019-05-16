@@ -1,4 +1,6 @@
+<script src="https://code.highcharts.com/highcharts.js"></script>
 <div id="chart"></div>
+<div id="total_chart"></div>
 
 <script>
 	Array.prototype.log = function () {
@@ -23,6 +25,14 @@
 			accountBalances[name] = available;
 		}
 	});
+	let totalTransactions = [];
+	let totalCurrentBalance = Object.values(accountBalances).reduce((acc, b) => acc + b, 0);
+	console.log('totalCurrentBalance', totalCurrentBalance);
+
+	let startDate = obj.transactions.transactions[obj.transactions.transactions.length - 1].date;
+	let endDate = obj.transactions.transactions[0].date;
+	console.log('startDate', startDate);
+	console.log('endDate', endDate);
 
 	obj.transactions.accounts.forEach(({account_id}) => {
 		let accountName = getAccountName(account_id);
@@ -30,17 +40,164 @@
 			.filter(t => t.account_id === account_id)
 			.sort(t => t.date)
 			.log()
-			.forEach(((transaction, index, transactions) => {
-			let { amount, account_id, name, date } = transaction;
-			let currentBalance = accountBalances[accountName] -= amount;
-			accountTransactions[accountName].push({
-				currentBalance: parseFloat(currentBalance.toFixed(2)),
-				amount,
-				name,
-				date
-				// ...transaction
+			.forEach((transaction, index, transactions) => {
+				let { amount, account_id, name, date, category } = transaction;
+				let [categoryName] = (category !== null) ? category.slice(-1) : 'Uncategorized';
+				let currentBalance = accountBalances[accountName] -= amount;
+				let [_, y, m, d] = date.match(/(\d{4})-(\d{2})-(\d{2})/);
+				let displayName = ((amount >= 0)
+					? `${date}: You spent $${parseFloat(amount.toFixed(2))} on "${categoryName}" at "${name}"`
+					: `${date}: You gained $${parseFloat((amount * -1).toFixed(2))} from "${name}" — "${categoryName}"`
+				)
+
+				accountTransactions[accountName].push({
+					x: Date.UTC(parseInt(y), parseInt(m - 1), parseInt(d)) + (Math.random() * 100000),
+					y: parseFloat(currentBalance.toFixed(2)),
+					name: displayName,
+				});
 			});
-		}));
+		accountTransactions[accountName].reverse();
 	});
+
+	obj.transactions.transactions
+			.sort(t => t.date)
+			.log()
+			.forEach((transaction, index, transactions) => {
+				let { amount, account_id, name, date, category } = transaction;
+				totalCurrentBalance -= amount;
+				let [categoryName] = (category !== null) ? category.slice(-1) : 'Uncategorized';
+				let [_, y, m, d] = date.match(/(\d{4})-(\d{2})-(\d{2})/);
+				let displayName = ((amount >= 0)
+					? `${date}: You spent $${parseFloat(amount.toFixed(2))} on "${categoryName}" at "${name}"`
+					: `${date}: You gained $${parseFloat((amount * -1).toFixed(2))} from "${name}" — "${categoryName}"`
+				)
+
+				totalTransactions.push({
+					x: Date.UTC(parseInt(y), parseInt(m - 1), parseInt(d)) + (Math.random() * 100000),
+					y: parseFloat(totalCurrentBalance.toFixed(2)),
+					name: displayName,
+				});
+			});
+	totalTransactions.reverse();
+
+	// function prepareTransactionsAsSeries(transactions) {
+	// 
+	// }
+
 	console.log('accountTransactions', accountTransactions);
+	console.log('totalTransactions', totalTransactions);
+	let series = obj.transactions.accounts.map(account => {
+		let accountName = getAccountName(account.account_id);
+		return {
+			name: accountName,
+			data: accountTransactions[accountName],
+		};
+	});
+
+	console.log('series', series);
+
+	Highcharts.chart('chart', {
+		chart: {
+			type: 'line'
+		},
+		title: {
+			text: 'Account balances over time'
+		},
+		xAxis: {
+			type: 'datetime',
+			dateTimeLabelFormats: {
+				month: '%e. %b',
+				year: '%b'
+			},
+			title: {
+				text: 'Date'
+			}
+		},
+		yAxis: {
+			title: {
+				text: 'Dollars'
+			},
+			labels: {
+				formatter: function () {
+					return `$${Math.round(this.value)}`;
+				}
+			}
+		},
+		tooltip: {
+			split: true,
+			// valueSuffix: ' millions'
+			// formatter: function(thing) {
+			// 	console.log('thing', thing);
+			// 	console.log('this', this);
+			// }
+		},
+		plotOptions: {
+			series: {
+				connectNulls: true
+			},
+
+			area: {
+				stacking: 'normal',
+				lineColor: '#666666',
+				lineWidth: 1,
+				marker: {
+					lineWidth: 1,
+					lineColor: '#666666'
+				}
+			}
+		},
+		series,
+	});
+
+	Highcharts.chart('total_chart', {
+		chart: {
+			type: 'line'
+		},
+		title: {
+			text: 'Account balances over time (combined)'
+		},
+		xAxis: {
+			type: 'datetime',
+			dateTimeLabelFormats: {
+				month: '%e. %b',
+				year: '%b'
+			},
+			title: {
+				text: 'Date'
+			}
+		},
+		yAxis: {
+			title: {
+				text: 'Dollars'
+			},
+			labels: {
+				formatter: function () {
+					return `$${Math.round(this.value)}`;
+				}
+			}
+		},
+		tooltip: {
+			split: true,
+			// valueSuffix: ' millions'
+		},
+		plotOptions: {
+			series: {
+				connectNulls: true
+			},
+
+			area: {
+				stacking: 'normal',
+				lineColor: '#666666',
+				lineWidth: 1,
+				marker: {
+					lineWidth: 1,
+					lineColor: '#666666'
+				}
+			}
+		},
+		series: [{
+			name: 'Total',
+			data: totalTransactions,
+		}],
+	});
 </script>
